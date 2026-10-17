@@ -34,13 +34,13 @@ import {
 } from './rbac'
 import './App.css'
 
-const tellerApiUrl = import.meta.env.VITE_API_URL || 'https://stl-ldn-api.com/api/accountant/TellerGrossPerDay?id=5&from=2026-10-09&to=2026-10-10'
-const drawApiUrl = import.meta.env.VITE_DRAW_API_URL || 'https://stl-ldn-api.com/api/accountant/GrossPerDraw?id=5&drawId=1463&from=2026-10-10&to=2026-10-11'
-const drawIds = ((import.meta.env.VITE_DRAW_IDS ?? '248,249,250,251,252,253')).split(',').map((value) => value.trim()).filter(Boolean)
-const overallApiUrl = import.meta.env.VITE_OVERALL_API_URL || 'https://stl-ldn-api.com/api/accountant/OverAllReports?id=5&from=2026-10-10&to=2026-10-11'
-const supervisorApiUrl = import.meta.env.VITE_SUPERVISOR_API_URL || 'https://stl-ldn-api.com/api/accountant/AccountantSpvrWithGross?id=5&from=2026-10-09&to=2026-10-10'
-const authorization = import.meta.env.VITE_AUTHORIZATION || '74242|PwJgY3Ia4jzsBUGsfyedB3BvpelUP0Sb9XxcYZmE'
-const configuredBranch = import.meta.env.VITE_BRANCH_NAME || 'LDN'
+const tellerApiUrl = import.meta.env.VITE_API_URL || ''
+const drawApiUrl = import.meta.env.VITE_DRAW_API_URL || ''
+const drawIds = (import.meta.env.VITE_DRAW_IDS || '').split(',').map((value) => value.trim()).filter(Boolean)
+const overallApiUrl = import.meta.env.VITE_OVERALL_API_URL || ''
+const supervisorApiUrl = import.meta.env.VITE_SUPERVISOR_API_URL || ''
+const authorization = import.meta.env.VITE_AUTHORIZATION || ''
+const configuredBranch = import.meta.env.VITE_BRANCH_NAME || ''
 
 function getCurrentDate() {
   return formatDate(new Date())
@@ -2033,34 +2033,36 @@ function App() {
       }
     }
     const isDummyToken = (t) => !t || t.startsWith('rbac-token') || t.startsWith('local-auth')
-    const fallbackToken = '74242|PwJgY3Ia4jzsBUGsfyedB3BvpelUP0Sb9XxcYZmE'
-    const effectiveToken = authorization || (!isDummyToken(currentUser?.token) ? currentUser?.token : null) || fallbackToken
+    const effectiveToken = authorization || (!isDummyToken(currentUser?.token) ? currentUser?.token : null) || ''
     const headers = effectiveToken
       ? { Authorization: `Bearer ${effectiveToken}`, Accept: 'application/json' }
       : { Accept: 'application/json' }
 
     let fallbackUrl = ''
-    if (type === 'overall') {
+    if (type === 'overall' && overallApiUrl) {
       const u = new URL(overallApiUrl)
       u.searchParams.set('from', params.from)
       u.searchParams.set('to', params.to)
       fallbackUrl = u.toString()
-    } else if (type === 'draw') {
+    } else if (type === 'draw' && drawApiUrl) {
       const u = new URL(drawApiUrl)
       u.searchParams.set('drawId', params.drawId)
       u.searchParams.set('from', params.from)
       u.searchParams.set('to', params.to)
       fallbackUrl = u.toString()
-    } else if (type === 'supervisor') {
+    } else if (type === 'supervisor' && supervisorApiUrl) {
       const u = new URL(supervisorApiUrl)
       u.searchParams.set('from', params.from)
       u.searchParams.set('to', params.to)
       fallbackUrl = u.toString()
-    } else if (type === 'teller') {
+    } else if (type === 'teller' && tellerApiUrl) {
       const u = new URL(tellerApiUrl)
       u.searchParams.set('from', params.from)
       u.searchParams.set('to', params.to)
       fallbackUrl = u.toString()
+    }
+    if (!fallbackUrl) {
+      throw new Error(`API endpoint for ${type} is not configured in environment variables.`)
     }
     const fRes = await fetch(fallbackUrl, { headers })
     if (!fRes.ok) throw new Error(`Request failed (${fRes.status})`)
